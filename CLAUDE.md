@@ -156,3 +156,23 @@ Fastlane handles signing and deployment — keystore credentials live in GitHub 
 - **MediaPipe Z-depth is unreliable on mobile** — use 2D profile-view angles for all coaching thresholds
 - **Gemini Context Caching is non-negotiable for cost** — without it, per-video API costs make the platform non-viable at scale
 - **ExoPlayer pooling is non-negotiable for stability** — one-player-per-tile will exhaust the hardware decoder budget and crash the app
+
+---
+
+## Required Binary Assets (not committed to git)
+
+### MediaPipe Pose Landmarker Model
+
+The file `app/src/main/assets/pose_landmarker_lite.task` (~5 MB) must be downloaded
+manually and placed in that directory before building. It is excluded from git because
+binary model files should not be version-controlled.
+
+**Download steps:**
+
+1. Visit the MediaPipe Models page:
+   https://developers.google.com/mediapipe/solutions/vision/pose_landmarker#models
+2. Download **Pose landmarker (lite)** — the file is named `pose_landmarker_lite.task`.
+3. Copy it to `app/src/main/assets/pose_landmarker_lite.task`.
+
+The `app/src/main/assets/` directory is kept in git via a `.gitkeep` file.
+The model file itself is listed in `.gitignore` (or should be added if not already present).

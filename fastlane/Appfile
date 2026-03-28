@@ -1,0 +1,8 @@
+# Appfile for ApexAI Athletics Android app.
+#
+# Package name must match the applicationId in app/build.gradle.kts.
+# Play Store credentials are supplied at runtime via env vars in Fastfile.
+# Nothing sensitive belongs in this file.
+
+json_key_file("")        # not used — key data injected via PLAY_STORE_JSON_KEY_DATA env var
+package_name("com.apexai.crossfit")

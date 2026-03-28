@@ -1,0 +1,137 @@
+# frozen_string_literal: true
+
+# Fastfile for ApexAI Athletics Android app.
+#
+# Lanes:
+#   test           — run all unit tests and lint
+#   build_debug    — assemble debug APK
+#   build_release  — assemble signed release AAB using keystore from env
+#   deploy_internal — upload AAB to Play Store internal testing track
+#
+# All sensitive credentials (keystore, Play Store JSON key) are read
+# from environment variables. NEVER commit secrets to source control.
+
+default_platform(:android)
+
+platform :android do
+
+  # -------------------------------------------------------
+  # Lane: test
+  # Runs unit tests and lint. Called on every PR and push.
+  # -------------------------------------------------------
+  desc "Run unit tests and lint checks"
+  lane :test do
+    gradle(
+      task: "test",
+      flags: "--continue"
+    )
+    gradle(task: "lint")
+  end
+
+  # -------------------------------------------------------
+  # Lane: build_debug
+  # Produces a debug APK for smoke testing.
+  # -------------------------------------------------------
+  desc "Build a debug APK"
+  lane :build_debug do
+    gradle(
+      task:        "assemble",
+      build_type:  "Debug"
+    )
+  end
+
+  # -------------------------------------------------------
+  # Lane: build_release
+  # Signs the release AAB using keystore credentials from
+  # environment variables. Never reads from local keystore files.
+  #
+  # Required env vars:
+  #   KEYSTORE_PATH      — absolute path to .keystore file
+  #   KEYSTORE_PASSWORD  — keystore password
+  #   KEY_ALIAS          — signing key alias
+  #   KEY_PASSWORD       — key password
+  # -------------------------------------------------------
+  desc "Build a signed release AAB"
+  lane :build_release do
+    # Validate that all required signing env vars are present
+    [
+      "KEYSTORE_PATH",
+      "KEYSTORE_PASSWORD",
+      "KEY_ALIAS",
+      "KEY_PASSWORD"
+    ].each do |var|
+      UI.user_error!("Missing required env var: #{var}") if ENV[var].nil? || ENV[var].empty?
+    end
+
+    gradle(
+      task:                    "bundle",
+      build_type:              "Release",
+      print_command:           false,           # suppress keystore path from CI logs
+      properties: {
+        "android.injected.signing.store.file"     => ENV["KEYSTORE_PATH"],
+        "android.injected.signing.store.password" => ENV["KEYSTORE_PASSWORD"],
+        "android.injected.signing.key.alias"      => ENV["KEY_ALIAS"],
+        "android.injected.signing.key.password"   => ENV["KEY_PASSWORD"]
+      }
+    )
+  end
+
+  # -------------------------------------------------------
+  # Lane: deploy_internal
+  # Uploads the signed AAB to Play Store internal testing track.
+  #
+  # Required env vars:
+  #   PLAY_STORE_JSON_KEY_DATA — full JSON content of the service account key
+  #                              (base64-decoded from GitHub secret)
+  #
+  # Call build_release before this lane in CI.
+  # -------------------------------------------------------
+  desc "Upload AAB to Play Store internal testing track"
+  lane :deploy_internal do
+    json_key_data = ENV["PLAY_STORE_JSON_KEY_DATA"]
+    UI.user_error!("PLAY_STORE_JSON_KEY_DATA not set") if json_key_data.nil? || json_key_data.empty?
+
+    upload_to_play_store(
+      track:               "internal",
+      aab:                 lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+      json_key_data:       json_key_data,
+      skip_upload_apk:     true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_screenshots: true,
+      skip_upload_images:  true
+    )
+
+    UI.success("AAB uploaded to Play Store internal track successfully.")
+  end
+
+  # -------------------------------------------------------
+  # Lane: deploy_beta
+  # Promotes the current internal build to the open beta track.
+  # -------------------------------------------------------
+  desc "Promote internal build to open beta track"
+  lane :deploy_beta do
+    json_key_data = ENV["PLAY_STORE_JSON_KEY_DATA"]
+    UI.user_error!("PLAY_STORE_JSON_KEY_DATA not set") if json_key_data.nil? || json_key_data.empty?
+
+    upload_to_play_store_internal_app_sharing(
+      json_key_data: json_key_data
+    ) rescue nil  # fallback if internal sharing not configured
+
+    upload_to_play_store(
+      track:               "beta",
+      track_promote_to:    "beta",
+      json_key_data:       json_key_data,
+      skip_upload_apk:     true,
+      skip_upload_metadata: true
+    )
+  end
+
+  # -------------------------------------------------------
+  # Error handler
+  # -------------------------------------------------------
+  error do |lane, exception, options|
+    UI.error("Lane '#{lane}' failed with: #{exception.message}")
+  end
+
+end

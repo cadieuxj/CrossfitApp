@@ -1,0 +1,18 @@
+<!-- app/src/main/res/values/themes.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash screen theme — sets the splash background and icon.
+         The actual animated splash is configured in code via installSplashScreen(). -->
+    <style name="Theme.CrossfitApp.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_apex_logo</item>
+        <item name="windowSplashScreenAnimationDuration">500</item>
+        <item name="postSplashScreenTheme">@style/Theme.CrossfitApp</item>
+    </style>
+
+    <style name="Theme.CrossfitApp" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+</resources>

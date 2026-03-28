@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher foreground: bold "A" lettermark for ApexAI Athletics.
+    Accent color: #E94560 on transparent background.
+    The viewportWidth/Height of 108x108 matches the adaptive icon safe zone spec.
+    The safe zone for adaptive icons is the inner 72x72 dp — content is centred within that.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Bold "A" centred in the 108×108 canvas -->
+    <path
+        android:fillColor="#E94560"
+        android:pathData="
+            M54,20
+            L78,88
+            L69,88
+            L63.5,72
+            L44.5,72
+            L39,88
+            L30,88
+            Z
+            M54,34
+            L47,62
+            L61,62
+            Z" />
+</vector>

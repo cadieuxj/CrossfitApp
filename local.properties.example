@@ -1,0 +1,13 @@
+# Copy this file to local.properties and fill in your values.
+# NEVER commit local.properties — it is listed in .gitignore.
+#
+# Supabase project credentials (required for auth + database access):
+# SUPABASE_URL=https://your-project-ref.supabase.co
+# SUPABASE_ANON_KEY=your_supabase_anon_key
+#
+# FastAPI backend base URL (defaults to https://api.apexai.example.com if omitted):
+# FASTAPI_BASE_URL=http://10.0.2.2:8000
+#
+# MAPS_API_KEY=your_google_maps_api_key_if_needed
+#
+# No additional keys required — backend secrets go in backend/.env (see backend/.env.example)

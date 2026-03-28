@@ -1,0 +1,120 @@
+<!-- app/src/main/res/values/strings.xml -->
+<resources>
+    <string name="app_name">ApexAI Athletics</string>
+
+    <!-- Auth -->
+    <string name="login_title">Sign In</string>
+    <string name="login_subtitle">Welcome back, athlete</string>
+    <string name="login_cta">Sign In</string>
+    <string name="login_register_prompt">Don\'t have an account? Register</string>
+    <string name="register_title">Create Account</string>
+    <string name="register_subtitle">Join the apex athletes</string>
+    <string name="register_cta">Create Account</string>
+    <string name="label_email">Email</string>
+    <string name="label_password">Password</string>
+    <string name="action_show">Show</string>
+    <string name="action_hide">Hide</string>
+    <string name="action_back">Back</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_close">Close</string>
+    <string name="action_retry">Retry</string>
+    <string name="error_email_invalid">Enter a valid email address</string>
+    <string name="error_password_short">Password must be at least 12 characters</string>
+
+    <!-- Home -->
+    <string name="home_title">ApexAI</string>
+    <string name="home_readiness_title">Readiness</string>
+    <string name="home_readiness_no_data">No readiness data. Sync Health Connect.</string>
+    <string name="home_today_wod">Today\'s WOD</string>
+    <string name="home_no_wod">No workout scheduled for today</string>
+    <string name="home_recent_prs">Recent PRs</string>
+    <string name="home_quick_camera">Camera</string>
+    <string name="home_quick_wod">WOD</string>
+    <string name="home_quick_prs">PRs</string>
+
+    <!-- WOD -->
+    <string name="wod_browse_title">Workouts</string>
+    <string name="wod_search_hint">Search workouts…</string>
+    <string name="wod_history_title">Workout History</string>
+    <string name="wod_history_empty">No workouts logged yet</string>
+    <string name="wod_detail_movements">Movements</string>
+    <string name="wod_detail_log_result">Log Result</string>
+    <string name="wod_detail_start_timer">Start Timer</string>
+    <string name="wod_log_title">Log Result</string>
+    <string name="wod_log_score_label">Score</string>
+    <string name="wod_log_rpe_label">RPE</string>
+    <string name="wod_log_notes_label">Notes (optional)</string>
+    <string name="wod_log_rxd_label">RxD</string>
+    <string name="wod_log_submit">Submit</string>
+    <string name="wod_timer_title">Timer</string>
+    <string name="wod_timer_start">Start</string>
+    <string name="wod_timer_pause">Pause</string>
+    <string name="wod_timer_reset">Reset</string>
+    <string name="wod_timer_log_result">Log Result</string>
+    <string name="wod_timer_reset_confirm_title">Reset Timer?</string>
+    <string name="wod_timer_reset_confirm_body">This will clear your current session.</string>
+    <string name="wod_timer_reset_confirm_yes">Reset</string>
+    <string name="wod_timer_reset_confirm_no">Cancel</string>
+    <string name="wod_pr_title">New PR!</string>
+    <string name="wod_pr_body">You set a new personal record on %1$s</string>
+    <string name="wod_pr_cta">Awesome!</string>
+    <string name="filter_all">All</string>
+    <string name="badge_rxd">RxD</string>
+
+    <!-- PR -->
+    <string name="pr_dashboard_title">Personal Records</string>
+    <string name="pr_dashboard_empty_title">No PRs yet</string>
+    <string name="pr_dashboard_empty_body">Log workouts to start tracking your bests</string>
+    <string name="pr_detail_current">Current PR</string>
+    <string name="pr_detail_history">History</string>
+    <string name="pr_range_3m">3M</string>
+    <string name="pr_range_6m">6M</string>
+    <string name="pr_range_1y">1Y</string>
+    <string name="pr_range_all">All</string>
+
+    <!-- Readiness -->
+    <string name="readiness_title">Readiness</string>
+    <string name="readiness_acwr_title">ACWR Load Ratio</string>
+    <string name="readiness_biometrics_title">Biometrics</string>
+    <string name="readiness_hrv_label">HRV</string>
+    <string name="readiness_sleep_label">Sleep</string>
+    <string name="readiness_rhr_label">Resting HR</string>
+    <string name="readiness_sync">Sync Health Data</string>
+    <string name="readiness_no_data">No readiness data.\nSync your health data to begin.</string>
+
+    <!-- Health Connect Setup -->
+    <string name="hc_setup_title">Health Connect Permissions</string>
+    <string name="hc_setup_body">ApexAI will read your Heart Rate Variability (HRV), sleep stages, and resting heart rate from Health Connect to calculate your daily ACWR readiness score.\n\nThis data is stored securely on Supabase servers and is never shared with third parties. You can delete your data at any time from your profile. Granting access is optional — readiness scoring will be unavailable without it.</string>
+    <string name="hc_setup_grant">Grant Permissions</string>
+    <string name="hc_setup_skip">Skip for Now</string>
+
+    <!-- Vision / Camera -->
+    <string name="camera_permission_title">Camera Required</string>
+    <string name="camera_permission_body">Camera access is required for pose analysis coaching</string>
+    <string name="camera_permission_grant">Grant Camera</string>
+    <string name="camera_recording">Recording</string>
+    <string name="camera_analyze">Analyze</string>
+    <string name="camera_rerecord">Re-record</string>
+    <string name="camera_movement_label">Movement</string>
+
+    <!-- Coaching Report -->
+    <string name="coaching_report_title">Coaching Report</string>
+    <string name="coaching_report_summary">Summary</string>
+    <string name="coaching_report_global_cues">Key Cues</string>
+    <string name="coaching_report_faults">Movement Faults</string>
+    <string name="coaching_report_loading">Analyzing your movement…</string>
+
+    <!-- Playback -->
+    <string name="playback_title">Movement Review</string>
+    <string name="playback_rep_breakdown">Rep Breakdown</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Profile</string>
+    <string name="profile_logout">Sign Out</string>
+
+    <!-- Generic -->
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="loading">Loading…</string>
+    <string name="empty_state_generic">Nothing here yet</string>
+    <string name="content_desc_logo">ApexAI Athletics logo</string>
+</resources>

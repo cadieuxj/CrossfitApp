@@ -1,0 +1,7 @@
+<!-- app/src/main/res/values/colors.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Used only for splash screen theme reference.
+         All runtime colors are defined in Color.kt and accessed via the Compose theme. -->
+    <color name="splash_background">#0A0A0F</color>
+</resources>

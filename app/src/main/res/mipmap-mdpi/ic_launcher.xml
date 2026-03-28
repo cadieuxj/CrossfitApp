@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    minSdk = 26, so all devices support adaptive icons.
+    This file exists to satisfy AAPT resource resolution for the mdpi bucket.
+    Real PNG assets (48×48 px) may be dropped here to replace this file if needed.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
