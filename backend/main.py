@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import aiofiles
+import sentry_sdk
 import structlog
 from fastapi import (
     BackgroundTasks,
@@ -64,6 +65,8 @@ from supabase import Client, create_client
 
 from gemini_service import GeminiService
 from models import (
+    AI_DISCLAIMER,
+    AnalysisConfidence,
     AnalysisStatus,
     AnalysisStatusResponse,
     AnalyzeVideoResponse,
@@ -75,7 +78,6 @@ from models import (
     GenerateCorrectionImageResponse,
     HealthCheckResponse,
     MovementFaultResponse,
-    TimedPoseOverlay,
 )
 
 logger = structlog.get_logger(__name__)
@@ -105,6 +107,9 @@ class Settings(BaseSettings):
     video_bucket_name: str = "videos"
     corrections_bucket_name: str = "corrections"
 
+    # Sentry (optional — leave blank to disable error reporting)
+    sentry_dsn: str = ""
+
     # App
     app_version: str = "1.0.0"
     debug: bool = False
@@ -112,6 +117,33 @@ class Settings(BaseSettings):
 
 
 settings = Settings()  # type: ignore[call-arg]
+
+# ---------------------------------------------------------------------------
+# Sentry Error Reporting (PII scrubbing — Quebec Law 25 compliance)
+# ---------------------------------------------------------------------------
+
+def _sentry_before_send(event: dict, hint: dict) -> dict | None:  # type: ignore[type-arg]
+    """
+    Strip PII from Sentry events before transmission.
+    Removes user email and IP address to comply with Quebec Law 25
+    and GDPR data minimisation requirements.
+    """
+    if "user" in event:
+        event["user"].pop("email", None)
+        event["user"].pop("ip_address", None)
+    if "request" in event and "env" in event["request"]:
+        event["request"]["env"].pop("REMOTE_ADDR", None)
+    return event
+
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        before_send=_sentry_before_send,
+        traces_sample_rate=0.1,
+        environment="production" if not settings.debug else "development",
+    )
+    logger.info("sentry_initialized")
 
 # ---------------------------------------------------------------------------
 # Application State
@@ -460,9 +492,9 @@ async def run_analysis_pipeline(
             "movement_type": movement_type,
             "overall_assessment": analysis_data.get("overall_assessment", ""),
             "rep_count": analysis_data.get("rep_count", 0),
-            "estimated_weight_kg": analysis_data.get("estimated_weight_kg"),
+            "analysis_confidence": analysis_data.get("analysis_confidence", AnalysisConfidence.MEDIUM.value),
+            "prompt_version": analysis_data.get("prompt_version", "v1.0"),
             "global_cues": analysis_data.get("global_cues", []),
-            "overlay_data": analysis_data.get("overlay_data", []),
         }
 
         supabase.table("coaching_reports").insert(report_row).execute()
@@ -849,21 +881,19 @@ async def get_coaching_report(
         for f in faults_data
     ]
 
-    overlay_data = [
-        TimedPoseOverlay(**item)
-        for item in (report_data.get("overlay_data") or [])
-    ]
-
     return CoachingReportResponse(
         id=report_data["id"],
         video_id=report_data["video_id"],
         movement_type=report_data["movement_type"],
         overall_assessment=report_data.get("overall_assessment", ""),
         rep_count=report_data.get("rep_count", 0),
-        estimated_weight_kg=report_data.get("estimated_weight_kg"),
+        analysis_confidence=AnalysisConfidence(
+            report_data.get("analysis_confidence", AnalysisConfidence.MEDIUM.value)
+        ),
         faults=faults,
         global_cues=report_data.get("global_cues", []),
-        overlay_data=overlay_data,
+        prompt_version=report_data.get("prompt_version", "v1.0"),
+        disclaimer=AI_DISCLAIMER,
         created_at=datetime.fromisoformat(report_data["created_at"]),
     )
 

@@ -49,10 +49,9 @@ from google.generativeai import caching
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
 
 from models import (
+    AnalysisConfidence,
     FaultSeverity,
     MovementFaultResponse,
-    PoseLandmark,
-    TimedPoseOverlay,
 )
 
 logger = structlog.get_logger(__name__)
@@ -70,6 +69,10 @@ CACHE_TTL_SECONDS: int = int(os.environ.get("GEMINI_CACHE_TTL_SECONDS", "3600"))
 
 # Maximum video file size allowed (500 MB per spec).
 MAX_VIDEO_SIZE_BYTES: int = 500 * 1024 * 1024
+
+# Prompt schema version — stored in coaching_reports for longitudinal audit.
+# Increment when changing the JSON schema requested from Gemini.
+PROMPT_VERSION: str = "v1.0"
 
 # Safety settings — allow sports/fitness content.
 # The default SafetySettings block violence-adjacent content which would
@@ -380,6 +383,8 @@ class GeminiService:
             video_id=video_id,
             rep_count=result.get("rep_count", 0),
             fault_count=len(result.get("faults", [])),
+            analysis_confidence=result.get("analysis_confidence", "UNKNOWN"),
+            prompt_version=PROMPT_VERSION,
         )
 
         return result
@@ -475,6 +480,16 @@ class GeminiService:
         Builds the structured analysis prompt for a specific movement type.
         The prompt instructs Gemini to return a specific JSON schema that
         maps directly to CoachingReportResponse.
+
+        IMPORTANT — what is NOT in this prompt:
+        - overlay_data / landmark coordinates: an LLM cannot produce valid
+          pixel-space pose coordinates from video. Real 3D pose data is computed
+          on-device by DepthPoseFuser (ARCore + MediaPipe). Including these fields
+          would produce hallucinated numbers that look plausible but are scientifically
+          invalid. (Scientific peer review finding, 2026-03.)
+        - estimated_weight_kg: barbell weight is not reliably estimable from
+          monocular video without calibration markers. Removed to prevent false
+          precision. (Scientific peer review finding, 2026-03.)
         """
         return f"""
 Analyze this CrossFit video of an athlete performing the {movement_type}.
@@ -486,7 +501,7 @@ Return your analysis ONLY as a valid JSON object matching this exact schema:
 
 {{
   "rep_count": <integer — number of complete, standard reps observed>,
-  "estimated_weight_kg": <float or null — estimated barbell weight in kg, null if undetectable or bodyweight>,
+  "analysis_confidence": "<HIGH|MEDIUM|LOW — HIGH: clear full-body video, consistent lighting; MEDIUM: partial occlusion or angle issues; LOW: poor quality, significant occlusion, or movement not clearly visible>",
   "overall_assessment": "<2-4 sentence summary of the athlete's overall performance and most critical area to address>",
   "faults": [
     {{
@@ -499,42 +514,16 @@ Return your analysis ONLY as a valid JSON object matching this exact schema:
   ],
   "global_cues": [
     "<coaching cue that applies to the entire set, not a specific rep>"
-  ],
-  "overlay_data": [
-    {{
-      "timestamp_ms": <integer>,
-      "landmarks": [
-        {{
-          "index": <0-32>,
-          "x": <0.0-1.0>,
-          "y": <0.0-1.0>,
-          "z": <float>,
-          "visibility": <0.0-1.0>
-        }}
-      ],
-      "joint_angles": {{
-        "LEFT_KNEE": <degrees>,
-        "RIGHT_KNEE": <degrees>,
-        "LEFT_HIP": <degrees>,
-        "RIGHT_HIP": <degrees>,
-        "LEFT_ELBOW": <degrees>,
-        "RIGHT_ELBOW": <degrees>,
-        "LEFT_SHOULDER": <degrees>,
-        "RIGHT_SHOULDER": <degrees>,
-        "TRUNK_INCLINATION": <degrees>
-      }}
-    }}
   ]
 }}
 
 Rules:
-1. overlay_data should include one entry every 100ms throughout the video.
-   For a 10-second video, that is approximately 100 entries.
-   Estimate landmark positions and joint angles as accurately as possible.
-2. List faults in order from most severe (CRITICAL first) to least severe (MINOR last).
-3. Limit to the 5 most significant faults maximum.
-4. Global cues should be 2-4 items.
-5. The overall_assessment must mention the athlete's strengths as well as areas to improve.
+1. List faults in order from most severe (CRITICAL first) to least severe (MINOR last).
+2. Limit to the 5 most significant faults maximum.
+3. Global cues should be 2-4 items.
+4. The overall_assessment must mention the athlete's strengths as well as areas to improve.
+5. Set analysis_confidence based on video quality and visibility — be honest; LOW is appropriate
+   for poor lighting, significant occlusion, or unclear movement.
 6. Return ONLY the JSON object. No markdown, no explanation text outside the JSON.
 """
 
@@ -561,23 +550,28 @@ Rules:
             data = json.loads(clean)
 
             # Structural validation
-            required_keys = {"movement_type", "overall_assessment", "faults", "global_cues", "overlay_data"}
+            required_keys = {"overall_assessment", "faults", "global_cues", "analysis_confidence"}
             missing = required_keys - data.keys()
             if missing:
                 raise ValueError(f"Gemini response missing required keys: {missing}")
 
-            if data.get("movement_type", "").upper() != movement_type.upper():
-                logger.warning(
-                    "movement_type mismatch: expected %s, got %s",
-                    movement_type,
-                    data.get("movement_type"),
-                )
-
             if not isinstance(data.get("faults"), list):
                 raise ValueError("'faults' must be a list")
 
-            if not isinstance(data.get("overlay_data"), list):
-                raise ValueError("'overlay_data' must be a list")
+            # Validate and normalise analysis_confidence
+            raw_confidence = str(data.get("analysis_confidence", "")).upper()
+            if raw_confidence not in {c.value for c in AnalysisConfidence}:
+                logger.warning(
+                    "gemini_unknown_confidence",
+                    raw=raw_confidence,
+                    movement_type=movement_type,
+                )
+                data["analysis_confidence"] = AnalysisConfidence.MEDIUM.value
+            else:
+                data["analysis_confidence"] = raw_confidence
+
+            # Stamp the prompt version so the report row is auditable
+            data["prompt_version"] = PROMPT_VERSION
 
             return data
 

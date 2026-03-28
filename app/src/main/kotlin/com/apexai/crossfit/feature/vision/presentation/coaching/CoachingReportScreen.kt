@@ -1,5 +1,6 @@
 package com.apexai.crossfit.feature.vision.presentation.coaching
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,14 +15,19 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AlertTriangle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Share
+
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -71,6 +78,7 @@ fun CoachingReportScreen(
     onNavigateToPlayback: (String, Long) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
@@ -91,11 +99,7 @@ fun CoachingReportScreen(
                         Icon(Icons.Outlined.Close, "Close", tint = TextPrimary)
                     }
                 },
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.Share, "Share", tint = TextPrimary)
-                    }
-                },
+                actions = {},
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = BackgroundDeepBlack)
             )
         },
@@ -107,6 +111,17 @@ fun CoachingReportScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp)
                     .windowInsetsPadding(WindowInsets.navigationBars)
             ) {
+                uiState.report?.let { report ->
+                    SecondaryButton(
+                        text = "Share with Coach",
+                        onClick = { shareReport(context, report) },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Share, null, modifier = Modifier.padding(end = 4.dp))
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
                 PrimaryButton(
                     text = "Done — Back to Home",
                     onClick = onNavigateHome,
@@ -214,6 +229,13 @@ private fun ReportContent(
                         }
                     }
                 }
+            }
+        }
+
+        // Fault timeline — shows where in the video each fault occurs
+        if (report.faults.isNotEmpty()) {
+            item {
+                FaultTimeline(faults = report.faults, clipDurationMs = report.clipDurationMs)
             }
         }
 
@@ -347,4 +369,126 @@ private fun FaultCard(fault: MovementFault, onClick: () -> Unit) {
 private fun formatTimestamp(ms: Long): String {
     val s = ms / 1000
     return "${(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}.${((ms % 1000) / 100)}"
+}
+
+/**
+ * Horizontal timeline showing where in the video each fault was detected.
+ * The track spans the full video duration (inferred from max fault timestamp).
+ * Colored diamond markers indicate CRITICAL (red), MODERATE (orange), MINOR (yellow).
+ * Tap to show fault label — uses passive visual only since faults are tappable below.
+ */
+@Composable
+private fun FaultTimeline(faults: List<MovementFault>, clipDurationMs: Long? = null) {
+    val maxMs = (clipDurationMs ?: faults.maxOf { it.timestampMs }).coerceAtLeast(1L)
+    val criticalColor = ColorError
+    val moderateColor = BlazeOrange
+    val minorColor    = ColorWarning
+    val trackColor    = SurfaceDark
+
+    ApexCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("FAULT TIMELINE", style = ApexTypography.labelSmall, color = TextSecondary)
+            Text(
+                "Tap a fault card below to jump to that moment in the video",
+                style = ApexTypography.bodySmall,
+                color = TextSecondary
+            )
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .padding(horizontal = 4.dp)
+            ) {
+                val trackY   = size.height / 2f
+                val trackH   = 4.dp.toPx()
+
+                // Draw background track
+                drawRoundRect(
+                    color     = trackColor,
+                    topLeft   = Offset(0f, trackY - trackH / 2),
+                    size      = Size(size.width, trackH),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(trackH / 2)
+                )
+
+                // Draw each fault as a vertical tick mark + dot
+                faults.forEach { fault ->
+                    val x = (fault.timestampMs.toFloat() / maxMs) * size.width
+                    val color = when (fault.severity) {
+                        FaultSeverity.CRITICAL -> criticalColor
+                        FaultSeverity.MODERATE -> moderateColor
+                        FaultSeverity.MINOR    -> minorColor
+                    }
+                    val dotRadius = when (fault.severity) {
+                        FaultSeverity.CRITICAL -> 8.dp.toPx()
+                        FaultSeverity.MODERATE -> 6.dp.toPx()
+                        FaultSeverity.MINOR    -> 4.dp.toPx()
+                    }
+                    // Glow ring
+                    drawCircle(color = color.copy(alpha = 0.25f), radius = dotRadius * 1.8f, center = Offset(x, trackY))
+                    // Solid dot
+                    drawCircle(color = color, radius = dotRadius, center = Offset(x, trackY))
+                }
+            }
+
+            // Legend
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                listOf(
+                    "CRITICAL" to ColorError,
+                    "MODERATE" to BlazeOrange,
+                    "MINOR"    to ColorWarning
+                ).forEach { (label, color) ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(Modifier.size(8.dp).background(color, com.apexai.crossfit.core.ui.theme.CornerFull))
+                        Text(label, style = ApexTypography.labelSmall, color = TextSecondary)
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "0:00 → ${formatTimestamp(maxMs)}",
+                    style = ApexTypography.labelSmall,
+                    color = TextSecondary
+                )
+            }
+        }
+    }
+}
+
+private fun shareReport(context: android.content.Context, report: CoachingReport) {
+    val sb = StringBuilder()
+    sb.appendLine("📋 AI Coaching Report — ${report.movementType}")
+    sb.appendLine("Generated: ${java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy").withZone(java.time.ZoneId.systemDefault()).format(report.createdAt)}")
+    sb.appendLine()
+    sb.appendLine("OVERALL ASSESSMENT")
+    sb.appendLine(report.overallAssessment)
+    sb.appendLine()
+    sb.appendLine("Reps recorded: ${report.repCount}")
+    if (report.globalCues.isNotEmpty()) {
+        sb.appendLine()
+        sb.appendLine("COACHING CUES")
+        report.globalCues.forEach { sb.appendLine("• $it") }
+    }
+    if (report.faults.isNotEmpty()) {
+        sb.appendLine()
+        sb.appendLine("MOVEMENT FAULTS (${report.faults.size})")
+        report.faults.forEach { fault ->
+            sb.appendLine("[${fault.severity.name}] ${formatTimestamp(fault.timestampMs)} — ${fault.description}")
+            sb.appendLine("  ↳ Cue: ${fault.cue}")
+        }
+    }
+    sb.appendLine()
+    sb.appendLine("⚠️ AI-generated analysis. Not a substitute for qualified coaching.")
+    sb.appendLine("— Shared from ApexAI Athletics")
+
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_SUBJECT, "My ${report.movementType} coaching report")
+        putExtra(android.content.Intent.EXTRA_TEXT, sb.toString())
+    }
+    context.startActivity(android.content.Intent.createChooser(intent, "Share with coach via…"))
 }

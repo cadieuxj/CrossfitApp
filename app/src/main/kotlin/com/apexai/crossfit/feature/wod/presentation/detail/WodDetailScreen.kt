@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Share
+
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -80,11 +80,7 @@ fun WodDetailScreen(
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = TextPrimary)
                     }
                 },
-                actions = {
-                    IconButton(onClick = { /* share */ }) {
-                        Icon(Icons.Outlined.Share, contentDescription = "Share", tint = TextPrimary)
-                    }
-                },
+                actions = {},
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = BackgroundDeepBlack
                 )
@@ -171,10 +167,13 @@ fun WodDetailScreen(
 @Composable
 private fun WodMetaRow(wod: com.apexai.crossfit.core.domain.model.Workout) {
     val domainColor = when (wod.timeDomain) {
-        TimeDomain.AMRAP   -> ElectricBlue
-        TimeDomain.EMOM    -> NeonGreen
-        TimeDomain.RFT     -> BlazeOrange
-        TimeDomain.TABATA  -> ColorWarning
+        TimeDomain.AMRAP      -> ElectricBlue
+        TimeDomain.EMOM       -> NeonGreen
+        TimeDomain.RFT        -> BlazeOrange
+        TimeDomain.TABATA     -> ColorWarning
+        TimeDomain.FOR_TIME   -> BlazeOrange  // Sprint/chipper — same energy as RFT
+        TimeDomain.MAX_WEIGHT -> NeonGreen    // Strength domain
+        TimeDomain.CALORIES   -> ElectricBlue // Cardio/machine domain
     }
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),

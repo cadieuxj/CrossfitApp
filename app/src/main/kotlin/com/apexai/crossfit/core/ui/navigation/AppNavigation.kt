@@ -31,6 +31,7 @@ import com.apexai.crossfit.feature.pr.presentation.detail.PrDetailScreen
 import com.apexai.crossfit.feature.pr.presentation.detail.PrDetailViewModel
 import com.apexai.crossfit.feature.readiness.presentation.ReadinessDashboardScreen
 import com.apexai.crossfit.feature.readiness.presentation.ReadinessViewModel
+import com.apexai.crossfit.feature.readiness.presentation.WellnessCheckInScreen
 import com.apexai.crossfit.feature.vision.presentation.camera.LiveCameraScreen
 import com.apexai.crossfit.feature.vision.presentation.camera.VisionViewModel
 import com.apexai.crossfit.feature.vision.presentation.review.RecordingReviewScreen
@@ -270,11 +271,20 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                 viewModel = vm,
                 currentNavRoute = NavRoutes.READINESS,
                 onNavigateToSetup = { navController.navigate(NavRoutes.READINESS_SETUP) },
+                onNavigateToWellnessCheckIn = { navController.navigate(NavRoutes.WELLNESS_CHECK_IN) },
                 onBottomNavNavigate = { route -> navController.navigate(route) {
                     popUpTo(NavRoutes.HOME) { saveState = true }
                     launchSingleTop = true
                     restoreState = true
                 }}
+            )
+        }
+
+        composable(NavRoutes.WELLNESS_CHECK_IN) {
+            val vm: com.apexai.crossfit.feature.readiness.presentation.WellnessCheckInViewModel = hiltViewModel()
+            WellnessCheckInScreen(
+                viewModel      = vm,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

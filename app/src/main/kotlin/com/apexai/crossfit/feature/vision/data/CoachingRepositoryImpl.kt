@@ -1,7 +1,9 @@
 package com.apexai.crossfit.feature.vision.data
 
+import android.content.Context
 import android.net.Uri
 import com.apexai.crossfit.core.data.network.FastApiService
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.apexai.crossfit.core.domain.model.CoachingReport
 import com.apexai.crossfit.core.domain.model.FaultSeverity
 import com.apexai.crossfit.core.domain.model.MovementFault
@@ -39,6 +41,7 @@ data class CoachingReportRow(
     val estimated_weight_kg: Double? = null,
     val global_cues: List<String> = emptyList(),
     val overlay_data: String? = null,
+    val clip_duration_ms: Long? = null,
     val created_at: String
 )
 
@@ -56,6 +59,7 @@ data class MovementFaultRow(
 
 @Singleton
 class CoachingRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val supabase: SupabaseClient,
     private val fastApiService: FastApiService
 ) : CoachingRepository {
@@ -66,19 +70,13 @@ class CoachingRepositoryImpl @Inject constructor(
     ): Flow<UploadProgress> = flow {
         val userId = supabase.auth.currentUserOrNull()?.id ?: error("Not authenticated")
         val accessToken = supabase.auth.currentSessionOrNull()?.accessToken ?: error("No token")
-        val context = android.app.Application()
 
         emit(UploadProgress(0L, 0L, "UPLOADING"))
 
-        // Read video bytes
-        val contentResolver = android.app.Application().contentResolver
-        val videoBytes = videoUri.let {
-            val stream = supabase.storage.from("videos").let { null }
-            // Use ContentResolver to read bytes from uri
-            java.io.ByteArrayOutputStream().also { out ->
-                // actual read from content resolver injected via context
-            }.toByteArray()
-        }
+        // Read video bytes from content URI using the injected application context
+        val videoBytes = context.contentResolver.openInputStream(videoUri)?.use { stream ->
+            stream.readBytes()
+        } ?: error("Unable to open video URI: $videoUri")
 
         // Upload to Supabase Storage
         val storagePath = "users/$userId/videos/${System.currentTimeMillis()}.mp4"
@@ -143,7 +141,8 @@ class CoachingRepositoryImpl @Inject constructor(
         faults            = faults.map { it.toDomain() }
             .sortedByDescending { it.severity.ordinal },
         globalCues        = global_cues,
-        createdAt         = Instant.parse(created_at)
+        createdAt         = Instant.parse(created_at),
+        clipDurationMs    = clip_duration_ms
     )
 
     private fun MovementFaultRow.toDomain() = MovementFault(

@@ -12,8 +12,9 @@ object NavRoutes {
     const val WOD_BROWSE     = "wod"
     const val WOD_HISTORY    = "wod/history"
     const val PR_DASHBOARD   = "pr"
-    const val READINESS      = "readiness"
-    const val READINESS_SETUP = "readiness/setup"
+    const val READINESS             = "readiness"
+    const val READINESS_SETUP       = "readiness/setup"
+    const val WELLNESS_CHECK_IN     = "readiness/wellness_check_in"
     const val PROFILE        = "profile"
 
     // WOD detail flow

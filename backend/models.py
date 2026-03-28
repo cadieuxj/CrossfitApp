@@ -46,6 +46,12 @@ class FaultSeverity(str, Enum):
     CRITICAL = "CRITICAL"
 
 
+class AnalysisConfidence(str, Enum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
 class AnalysisStatus(str, Enum):
     PROCESSING = "processing"
     COMPLETE = "complete"
@@ -61,8 +67,9 @@ class AnalysisStage(str, Enum):
 
 # ---------------------------------------------------------------------------
 # Pose / Overlay Data Shapes
-# These are stored as JSONB in coaching_reports.overlay_data and returned
-# to the Android client for kinematic overlay playback.
+# PoseLandmark and TimedPoseOverlay are retained for on-device use only.
+# They are NOT populated by Gemini (LLMs cannot produce valid pose coordinates).
+# Real 3D pose data is produced by DepthPoseFuser (ARCore + MediaPipe) on-device.
 # ---------------------------------------------------------------------------
 
 class PoseLandmark(BaseModel):
@@ -114,20 +121,35 @@ class MovementFaultResponse(BaseModel):
 # Coaching Report (full response returned to Android)
 # ---------------------------------------------------------------------------
 
+AI_DISCLAIMER = (
+    "AI-generated analysis · Not coach-validated · "
+    "CRITICAL flags should be reviewed with a qualified coach. "
+    "Score based on population research · Not individually calibrated."
+)
+
+
 class CoachingReportResponse(BaseModel):
     """
     Complete Gemini coaching analysis result.
     Returned by GET /coaching/report/{analysis_id}.
+
+    Notes:
+    - overlay_data removed: LLMs cannot produce valid pose coordinates.
+      Real 3D pose data is produced by DepthPoseFuser on-device.
+    - estimated_weight_kg removed: unverifiable from monocular video.
+    - analysis_confidence added: HIGH/MEDIUM/LOW based on video clarity.
+    - disclaimer added: Quebec Law 25 compliance requirement.
     """
     id: str
     video_id: str
     movement_type: str
     overall_assessment: str
     rep_count: int = Field(..., ge=0)
-    estimated_weight_kg: float | None = Field(default=None, ge=0)
+    analysis_confidence: AnalysisConfidence = AnalysisConfidence.MEDIUM
     faults: list[MovementFaultResponse]
     global_cues: list[str]
-    overlay_data: list[TimedPoseOverlay]
+    prompt_version: str = "v1.0"
+    disclaimer: str = AI_DISCLAIMER
     created_at: datetime
 
 

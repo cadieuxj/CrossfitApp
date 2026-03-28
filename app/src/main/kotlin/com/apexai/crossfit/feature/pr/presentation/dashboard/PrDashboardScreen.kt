@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EmojiEvents
-import androidx.compose.material.icons.outlined.SlidersHorizontal
+
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -60,11 +60,7 @@ fun PrDashboardScreen(
             LargeTopAppBar(
                 title = { Text("Personal Records", color = TextPrimary) },
                 scrollBehavior = scrollBehavior,
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.SlidersHorizontal, "Filter", tint = TextPrimary)
-                    }
-                },
+                actions = {},
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = BackgroundDeepBlack,
                     scrolledContainerColor = BackgroundDeepBlack
@@ -201,4 +197,4 @@ private fun Modifier.clickable(
     )
 )
 
-private val remember = @Composable { androidx.compose.runtime.remember { } }
+

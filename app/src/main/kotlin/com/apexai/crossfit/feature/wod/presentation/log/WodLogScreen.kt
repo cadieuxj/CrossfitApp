@@ -6,6 +6,9 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,7 +45,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -305,7 +312,7 @@ private fun ScoreInputSection(
 
 @Composable
 private fun RpeSelector(selectedRpe: Int?, onRpeSelected: (Int) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         (1..10).forEach { value ->
             val rpeColor = when (value) {
                 in 1..4  -> NeonGreen
@@ -315,7 +322,8 @@ private fun RpeSelector(selectedRpe: Int?, onRpeSelected: (Int) -> Unit) {
             val isSelected = selectedRpe == value
             Box(
                 modifier = Modifier
-                    .size(width = 28.dp, height = 44.dp)
+                    .weight(1f)
+                    .height(48.dp)
                     .clip(CornerSmall)
                     .background(if (isSelected) rpeColor.copy(alpha = 0.2f) else SurfaceElevated)
                     .border(
@@ -345,33 +353,84 @@ private fun RpeSelector(selectedRpe: Int?, onRpeSelected: (Int) -> Unit) {
 @Composable
 private fun DurationPickerSection(durationMinutes: Int?, onDurationChanged: (Int) -> Unit) {
     val current = durationMinutes ?: 0
+    val scope   = rememberCoroutineScope()
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        IconButton(
-            onClick = { if (current > 1) onDurationChanged(current - 1) },
+        // Decrement — tap −1, hold >400ms to ramp −5 every 150ms; cancels on release
+        val canDecrement = durationMinutes != null && current > 1
+        Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CornerFull)
                 .background(SurfaceElevated)
+                .then(
+                    if (canDecrement) Modifier.pointerInput(current) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            var longPressTriggered = false
+                            val holdJob = scope.launch {
+                                delay(400L)
+                                longPressTriggered = true
+                                var held = current
+                                while (held > 1) {
+                                    held = (held - 5).coerceAtLeast(1)
+                                    onDurationChanged(held)
+                                    delay(150L)
+                                }
+                            }
+                            waitForUpOrCancellation()
+                            holdJob.cancel()
+                            if (!longPressTriggered) {
+                                onDurationChanged((current - 1).coerceAtLeast(1))
+                            }
+                        }
+                    } else Modifier
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            Text("−", style = ApexTypography.headlineMedium, color = TextPrimary)
+            Text("−", style = ApexTypography.headlineMedium,
+                color = if (canDecrement) TextPrimary else TextSecondary)
         }
+
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
             Text(
                 if (current > 0) "$current min" else "—",
                 style = ApexTypography.headlineSmall,
                 color = if (current > 0) ElectricBlue else TextSecondary
             )
-            Text("1–240 minutes", style = ApexTypography.bodySmall, color = TextSecondary)
+            Text("1–240 min  •  hold to jump ±5", style = ApexTypography.bodySmall, color = TextSecondary)
         }
-        IconButton(
-            onClick = { onDurationChanged(if (current < 240) current + 1 else 240) },
+
+        // Increment — tap +1, hold >400ms to ramp +5 every 150ms; cancels on release
+        Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CornerFull)
                 .background(SurfaceElevated)
+                .pointerInput(current) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var longPressTriggered = false
+                        val holdJob = scope.launch {
+                            delay(400L)
+                            longPressTriggered = true
+                            var held = current
+                            while (held < 240) {
+                                held = (held + 5).coerceAtMost(240)
+                                onDurationChanged(held)
+                                delay(150L)
+                            }
+                        }
+                        waitForUpOrCancellation()
+                        holdJob.cancel()
+                        if (!longPressTriggered) {
+                            onDurationChanged((current + 1).coerceAtMost(240))
+                        }
+                    }
+                },
+            contentAlignment = Alignment.Center
         ) {
             Text("+", style = ApexTypography.headlineMedium, color = TextPrimary)
         }

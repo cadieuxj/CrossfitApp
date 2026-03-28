@@ -85,6 +85,23 @@ fun LiveCameraScreen(
         }
     }
 
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("Discard recording?") },
+            text  = { Text("This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardDialog = false
+                    viewModel.onEvent(VisionEvent.DiscardRecording)
+                }) { Text("Discard", color = ColorError) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     errorMessage?.let { msg ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { errorMessage = null },
@@ -210,18 +227,20 @@ fun LiveCameraScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Angle readouts
+            // Depth mode badge + angle readouts
             AngleReadoutsRow(
                 jointAngles = uiState.currentPoseResult?.jointAngles ?: emptyMap(),
-                fps         = uiState.fps
+                fps         = uiState.fps,
+                depthMode   = uiState.depthMode
             )
 
             // Recording controls
             RecordingControls(
-                isRecording = uiState.isRecording,
+                isRecording      = uiState.isRecording,
                 onStartRecording = { viewModel.onEvent(VisionEvent.StartRecording) },
                 onStopRecording  = { viewModel.onEvent(VisionEvent.StopRecording) },
-                onPauseRecording = { viewModel.onEvent(VisionEvent.PauseRecording) }
+                onPauseRecording = { viewModel.onEvent(VisionEvent.PauseRecording) },
+                onDiscardRequest = { showDiscardDialog = true }
             )
         }
     }
@@ -250,7 +269,8 @@ private fun RecordingPulse() {
 @Composable
 private fun AngleReadoutsRow(
     jointAngles: Map<com.apexai.crossfit.core.domain.model.JointAngle, Float>,
-    fps: Int
+    fps: Int,
+    depthMode: DepthMode = DepthMode.POSE_2D
 ) {
     Box(
         modifier = Modifier
@@ -272,7 +292,7 @@ private fun AngleReadoutsRow(
                 ) {
                     Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)) {
                         Text(
-                            joint.name.replace("_", " ").take(8),
+                            JOINT_LABEL_MAP[joint.name] ?: joint.name.replace("_", " ").take(8),
                             style = ApexTypography.labelSmall,
                             color = TextSecondary
                         )
@@ -293,6 +313,20 @@ private fun AngleReadoutsRow(
                     Text("$fps fps", style = ApexTypography.labelSmall, color = TextSecondary)
                 }
             }
+            item {
+                val (badgeLabel, badgeColor) = when (depthMode) {
+                    DepthMode.DEPTH_3D    -> "3D DEPTH" to NeonGreen
+                    DepthMode.POSE_2D     -> "2D POSE"  to ElectricBlue
+                    DepthMode.INITIALIZING -> "…"       to TextSecondary
+                }
+                Box(
+                    modifier = Modifier
+                        .background(SurfaceDark.copy(alpha = 0.8f), CornerSmall)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(badgeLabel, style = ApexTypography.labelSmall, color = badgeColor)
+                }
+            }
         }
     }
 }
@@ -302,7 +336,8 @@ private fun RecordingControls(
     isRecording: Boolean,
     onStartRecording: () -> Unit,
     onStopRecording: () -> Unit,
-    onPauseRecording: () -> Unit
+    onPauseRecording: () -> Unit,
+    onDiscardRequest: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -323,15 +358,15 @@ private fun RecordingControls(
                 RecordButton(onClick = onStartRecording)
                 Box(Modifier.size(60.dp))
             } else {
-                // Discard button
+                // Discard button (Delete icon + confirmation dialog)
                 IconButton(
-                    onClick = { viewModel.onEvent(VisionEvent.DiscardRecording) },
+                    onClick = onDiscardRequest,
                     modifier = Modifier
                         .size(60.dp)
                         .background(SurfaceDark.copy(alpha = 0.8f), com.apexai.crossfit.core.ui.theme.CornerFull)
                 ) {
                     Icon(
-                        Icons.Outlined.ArrowBack,
+                        Icons.Outlined.Delete,
                         "Discard recording",
                         tint = ColorError,
                         modifier = Modifier.size(24.dp)
@@ -344,7 +379,7 @@ private fun RecordingControls(
                         .size(60.dp)
                         .background(SurfaceDark.copy(alpha = 0.8f), com.apexai.crossfit.core.ui.theme.CornerFull)
                 ) {
-                    Icon(Icons.Outlined.Camera, "Pause recording", tint = TextPrimary)
+                    Icon(Icons.Outlined.Pause, "Pause recording", tint = TextPrimary)
                 }
             }
         }
@@ -471,6 +506,20 @@ private fun CameraPermissionRequest(
         ApexTextButton(text = "Not Now", onClick = onNavigateBack)
     }
 }
+
+private val JOINT_LABEL_MAP = mapOf(
+    "LEFT_KNEE"        to "L.Knee",
+    "RIGHT_KNEE"       to "R.Knee",
+    "LEFT_HIP"         to "L.Hip",
+    "RIGHT_HIP"        to "R.Hip",
+    "LEFT_SHOULDER"    to "L.Shld",
+    "RIGHT_SHOULDER"   to "R.Shld",
+    "LEFT_ELBOW"       to "L.Elbow",
+    "RIGHT_ELBOW"      to "R.Elbow",
+    "LEFT_ANKLE"       to "L.Ankle",
+    "RIGHT_ANKLE"      to "R.Ankle",
+    "TRUNK_INCLINATION" to "Trunk"
+)
 
 private fun formatMMSS(millis: Long): String {
     val s = millis / 1000

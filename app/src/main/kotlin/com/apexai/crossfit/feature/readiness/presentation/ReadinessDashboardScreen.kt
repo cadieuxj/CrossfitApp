@@ -13,8 +13,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -283,7 +286,7 @@ private fun BiometricCardsRow(uiState: ReadinessUiState) {
             // HRV card
             ApexCard(modifier = Modifier.weight(1f).height(110.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Outlined.Refresh, null, tint = ElectricBlue, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Outlined.MonitorHeart, null, tint = ElectricBlue, modifier = Modifier.size(20.dp))
                     Text("HRV", style = ApexTypography.labelSmall, color = TextSecondary)
                     val hrv = uiState.latestHrv
                     val hrvColor = when {
@@ -303,7 +306,7 @@ private fun BiometricCardsRow(uiState: ReadinessUiState) {
             // Sleep card
             ApexCard(modifier = Modifier.weight(1f).height(110.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Outlined.Refresh, null, tint = ElectricBlue, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Outlined.Bedtime, null, tint = ElectricBlue, modifier = Modifier.size(20.dp))
                     Text("SLEEP", style = ApexTypography.labelSmall, color = TextSecondary)
                     val mins = uiState.sleepDurationMinutes
                     Text(
@@ -317,7 +320,7 @@ private fun BiometricCardsRow(uiState: ReadinessUiState) {
             // Resting HR card
             ApexCard(modifier = Modifier.weight(1f).height(110.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Outlined.Refresh, null, tint = ElectricBlue, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Outlined.Favorite, null, tint = ElectricBlue, modifier = Modifier.size(20.dp))
                     Text("RESTING HR", style = ApexTypography.labelSmall, color = TextSecondary)
                     Text(
                         if (uiState.restingHr != null) "${uiState.restingHr} bpm" else "—",

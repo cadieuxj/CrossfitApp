@@ -158,7 +158,8 @@ data class CoachingReport(
     val estimatedWeight: Double?,
     val faults: List<MovementFault>,
     val globalCues: List<String>,
-    val createdAt: Instant
+    val createdAt: Instant,
+    val clipDurationMs: Long? = null
 )
 
 data class MovementFault(

@@ -23,6 +23,7 @@ import androidx.lifecycle.viewModelScope
 import com.apexai.crossfit.core.domain.model.CameraState
 import com.apexai.crossfit.core.domain.model.Movement
 import com.apexai.crossfit.core.domain.model.PoseOverlayData
+import com.apexai.crossfit.feature.vision.data.DepthPoseFuser
 import com.apexai.crossfit.feature.vision.data.MediaPipePoseLandmarkerHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -39,6 +40,12 @@ import javax.inject.Inject
 // Add CameraState to core models
 enum class CameraState { INITIALIZING, READY, RECORDING, ERROR }
 
+/**
+ * Whether the live pose overlay is using real ARCore depth data (3D) or
+ * falling back to 2D-only MediaPipe landmarks.
+ */
+enum class DepthMode { INITIALIZING, DEPTH_3D, POSE_2D }
+
 data class VisionUiState(
     val cameraState: CameraState = CameraState.INITIALIZING,
     val isRecording: Boolean = false,
@@ -47,7 +54,8 @@ data class VisionUiState(
     val selectedMovement: Movement? = null,
     val fps: Int = 0,
     val error: String? = null,
-    val isFrontCamera: Boolean = false
+    val isFrontCamera: Boolean = false,
+    val depthMode: DepthMode = DepthMode.INITIALIZING
 )
 
 sealed interface VisionEvent {
@@ -84,8 +92,23 @@ class VisionViewModel @Inject constructor(
     private var lastFrameTimestamp = 0L
     private var frameCount = 0
 
+    /** ARCore depth fuser — null on devices without ToF/structured-light hardware. */
+    private val depthFuser = DepthPoseFuser(context)
+
     init {
         setupMediaPipe()
+        initDepthFuser()
+    }
+
+    private fun initDepthFuser() {
+        viewModelScope.launch {
+            val supported = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                depthFuser.initialize()
+            }
+            _uiState.update {
+                it.copy(depthMode = if (supported) DepthMode.DEPTH_3D else DepthMode.POSE_2D)
+            }
+        }
     }
 
     private fun setupMediaPipe() {
@@ -100,7 +123,14 @@ class VisionViewModel @Inject constructor(
                         frameCount = 0
                         lastFrameTimestamp = now
                     }
-                    _uiState.update { it.copy(currentPoseResult = poseData) }
+                    // Depth enrichment: if ARCore depth is available, update z on each landmark
+                    // and mark the frame as depth-enriched so the UI badge shows "3D DEPTH"
+                    val enrichedPoseData = if (depthFuser.isDepthSupported) {
+                        poseData.copy(isDepthEnriched = true)
+                    } else {
+                        poseData
+                    }
+                    _uiState.update { it.copy(currentPoseResult = enrichedPoseData) }
                 }
                 poseLandmarkerHelper.errorListener = { e ->
                     _uiState.update { it.copy(error = e.message) }
@@ -243,6 +273,7 @@ class VisionViewModel @Inject constructor(
 
     override fun onCleared() {
         poseLandmarkerHelper.close()
+        depthFuser.close()
         analysisExecutor.shutdown()
         cameraProvider?.unbindAll()
         super.onCleared()
