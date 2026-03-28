@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MonitorHeart
@@ -59,6 +60,7 @@ sealed class BottomNavItem(
     data object Home      : BottomNavItem(NavRoutes.HOME, Icons.Outlined.Home, "Home")
     data object Wod       : BottomNavItem(NavRoutes.WOD_BROWSE, Icons.Outlined.FitnessCenter, "WOD")
     data object Pr        : BottomNavItem(NavRoutes.PR_DASHBOARD, Icons.Outlined.StarBorder, "PRs")
+    data object Season    : BottomNavItem(NavRoutes.COMPETITION, Icons.Outlined.CalendarMonth, "Season")
     data object Readiness : BottomNavItem(NavRoutes.READINESS, Icons.Outlined.MonitorHeart, "Readiness")
     data object Profile   : BottomNavItem(NavRoutes.PROFILE, Icons.Outlined.Person, "Profile")
 }
@@ -67,6 +69,7 @@ val bottomNavItems = listOf(
     BottomNavItem.Home,
     BottomNavItem.Wod,
     BottomNavItem.Pr,
+    BottomNavItem.Season,
     BottomNavItem.Readiness,
     BottomNavItem.Profile
 )
@@ -110,8 +113,8 @@ fun ApexBottomNavBar(
                 // Centre FAB placeholder
                 Box(modifier = Modifier.size(72.dp))
 
-                // Right 2 items (skip the center)
-                bottomNavItems.takeLast(2).forEach { item ->
+                // Right 3 items: Season, Readiness, Profile
+                bottomNavItems.takeLast(3).forEach { item ->
                     NavBarItem(
                         item = item,
                         isSelected = currentRoute == item.route,

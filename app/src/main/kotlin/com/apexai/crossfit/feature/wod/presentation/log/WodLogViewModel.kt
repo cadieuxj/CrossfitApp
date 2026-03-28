@@ -7,6 +7,7 @@ import com.apexai.crossfit.core.domain.model.PersonalRecord
 import com.apexai.crossfit.core.domain.model.ScoringMetric
 import com.apexai.crossfit.core.domain.model.Workout
 import com.apexai.crossfit.core.domain.model.WorkoutResultInput
+import com.apexai.crossfit.feature.competition.domain.CompetitionRepository
 import com.apexai.crossfit.feature.wod.domain.WodRepository
 import com.apexai.crossfit.feature.wod.domain.usecase.SubmitResultUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,7 +31,11 @@ data class WodLogUiState(
     val isSubmitting: Boolean = false,
     val isLoading: Boolean = true,
     val newPrs: List<PersonalRecord> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    // Competition mode
+    val isActiveCompetitionEvent: Boolean = false,
+    val activeCompetitionName: String? = null,
+    val isOfficialSubmission: Boolean = false
 )
 
 sealed interface WodLogEvent {
@@ -39,6 +44,7 @@ sealed interface WodLogEvent {
     data class NotesChanged(val notes: String)          : WodLogEvent
     data class RpeSelected(val rpe: Int)                : WodLogEvent
     data class DurationChanged(val minutes: Int)        : WodLogEvent
+    data class OfficialSubmissionToggled(val isOfficial: Boolean) : WodLogEvent
     data object SubmitClicked                           : WodLogEvent
     data object DismissPrSheet                          : WodLogEvent
 }
@@ -53,6 +59,7 @@ sealed interface WodLogEffect {
 class WodLogViewModel @Inject constructor(
     private val submitResultUseCase: SubmitResultUseCase,
     private val repository: WodRepository,
+    private val competitionRepository: CompetitionRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -72,6 +79,23 @@ class WodLogViewModel @Inject constructor(
                     _uiState.update { it.copy(workout = workout, isLoading = false) }
                 }
         }
+        checkActiveCompetition()
+    }
+
+    private fun checkActiveCompetition() {
+        viewModelScope.launch {
+            competitionRepository.getActiveEvents()
+                .catch { }
+                .collect { activeEvents ->
+                    val event = activeEvents.firstOrNull()
+                    _uiState.update {
+                        it.copy(
+                            isActiveCompetitionEvent = event != null,
+                            activeCompetitionName = event?.name
+                        )
+                    }
+                }
+        }
     }
 
     fun onEvent(event: WodLogEvent) {
@@ -81,6 +105,7 @@ class WodLogViewModel @Inject constructor(
             is WodLogEvent.NotesChanged    -> _uiState.update { it.copy(notes = event.notes) }
             is WodLogEvent.RpeSelected     -> _uiState.update { it.copy(rpe = event.rpe) }
             is WodLogEvent.DurationChanged -> _uiState.update { it.copy(sessionDurationMinutes = event.minutes.coerceIn(1, 240)) }
+            is WodLogEvent.OfficialSubmissionToggled -> _uiState.update { it.copy(isOfficialSubmission = event.isOfficial) }
             is WodLogEvent.SubmitClicked   -> submit()
             is WodLogEvent.DismissPrSheet -> viewModelScope.launch {
                 _effects.send(WodLogEffect.NavigateBack)
@@ -123,7 +148,8 @@ class WodLogViewModel @Inject constructor(
                     rxd                    = state.rxd,
                     notes                  = state.notes.ifBlank { null },
                     rpe                    = state.rpe,
-                    sessionDurationMinutes = state.sessionDurationMinutes
+                    sessionDurationMinutes = state.sessionDurationMinutes,
+                    isOfficialSubmission   = state.isOfficialSubmission
                 )
             ).onSuccess { result ->
                 _uiState.update { it.copy(isSubmitting = false) }

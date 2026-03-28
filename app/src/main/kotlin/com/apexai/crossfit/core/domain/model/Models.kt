@@ -36,7 +36,8 @@ data class WorkoutMovement(
     val prescribedWeight: Double?,
     val prescribedDistance: Double?,
     val prescribedCalories: Int?,
-    val sortOrder: Int
+    val sortOrder: Int,
+    val repScheme: String? = null   // e.g. "21-15-9", "50-40-30-20-10"; null for fixed-rep movements
 )
 
 data class Movement(
@@ -56,7 +57,9 @@ data class WorkoutResult(
     val notes: String?,
     val rpe: Int?,
     val completedAt: Instant,
-    val newPrs: List<PersonalRecord> = emptyList()
+    val newPrs: List<PersonalRecord> = emptyList(),
+    val coachNote: String? = null,
+    val isOfficialSubmission: Boolean = false
 )
 
 data class WorkoutResultInput(
@@ -66,7 +69,8 @@ data class WorkoutResultInput(
     val rxd: Boolean,
     val notes: String?,
     val rpe: Int?,
-    val sessionDurationMinutes: Int? = null
+    val sessionDurationMinutes: Int? = null,
+    val isOfficialSubmission: Boolean = false
 )
 
 // ============================================================
@@ -208,6 +212,134 @@ data class FaultMarker(
     val timestampMs: Long,
     val label: String,
     val severity: FaultSeverity
+)
+
+// ============================================================
+// Competition domain
+// ============================================================
+
+enum class CompetitionType { OPEN, QUARTERFINALS, SEMIFINALS, GAMES, LOCAL, VIRTUAL }
+enum class CompetitionStatus { UPCOMING, ACTIVE, COMPLETED }
+
+data class CompetitionEvent(
+    val id: String,
+    val name: String,
+    val type: CompetitionType,
+    val status: CompetitionStatus,
+    val startDate: java.time.LocalDate,
+    val endDate: java.time.LocalDate,
+    val description: String?,
+    val leaderboardUrl: String?
+)
+
+data class CompetitionStanding(
+    val id: String,
+    val userId: String,
+    val eventId: String,
+    val workoutName: String,
+    val score: String,
+    val scoreNumeric: Double?,
+    val division: String,
+    val rankOverall: Int?,
+    val rankAgeGroup: Int?,
+    val percentile: Double?,
+    val submittedAt: Instant
+)
+
+data class CompetitionStandingInput(
+    val eventId: String,
+    val workoutName: String,
+    val score: String,
+    val scoreNumeric: Double?,
+    val division: String = "RX",
+    val rankOverall: Int? = null,
+    val rankAgeGroup: Int? = null,
+    val percentile: Double? = null
+)
+
+// ============================================================
+// Nutrition domain
+// ============================================================
+
+enum class MealType { BREAKFAST, LUNCH, DINNER, SNACK, PRE_WORKOUT, POST_WORKOUT }
+
+data class MacroTargets(
+    val userId: String,
+    val caloriesKcal: Int,
+    val proteinG: Int,
+    val carbsG: Int,
+    val fatG: Int,
+    val restDayCalories: Int? = null,
+    val restDayProteinG: Int? = null,
+    val restDayCarbsG: Int? = null,
+    val restDayFatG: Int? = null
+)
+
+data class MacroEntry(
+    val id: String,
+    val userId: String,
+    val loggedDate: java.time.LocalDate,
+    val mealType: MealType,
+    val foodName: String,
+    val calories: Int,
+    val proteinG: Double,
+    val carbsG: Double,
+    val fatG: Double,
+    val notes: String?,
+    val loggedAt: Instant
+)
+
+data class MacroEntryInput(
+    val loggedDate: java.time.LocalDate,
+    val mealType: MealType,
+    val foodName: String,
+    val calories: Int,
+    val proteinG: Double,
+    val carbsG: Double,
+    val fatG: Double,
+    val notes: String? = null
+)
+
+data class DailyMacroSummary(
+    val date: java.time.LocalDate,
+    val totalCalories: Int,
+    val totalProteinG: Double,
+    val totalCarbsG: Double,
+    val totalFatG: Double,
+    val entries: List<MacroEntry>
+)
+
+data class CommonFood(
+    val id: Int,
+    val name: String,
+    val servingG: Int,
+    val calories: Int,
+    val proteinG: Double,
+    val carbsG: Double,
+    val fatG: Double,
+    val category: String?
+)
+
+// ============================================================
+// Coach integration domain
+// ============================================================
+
+enum class CoachConnectionStatus { LINKED, UNLINKED }
+
+data class CoachInfo(
+    val id: String,
+    val displayName: String,
+    val gymName: String?,
+    val inviteCode: String
+)
+
+data class CoachConnection(
+    val id: String,
+    val coachId: String,
+    val coachDisplayName: String,
+    val gymName: String?,
+    val permissions: List<String>,
+    val connectedAt: Instant
 )
 
 // ============================================================

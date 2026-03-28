@@ -192,6 +192,12 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    // --- WorkManager (macro reminder notifications) ---
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
+    testImplementation(libs.work.testing)
+
     // --- OkHttp ---
     implementation(libs.okhttp.logging)
 

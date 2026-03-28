@@ -29,7 +29,9 @@ Background Tasks:
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+import subprocess
 import tempfile
 import time
 import uuid
@@ -81,6 +83,37 @@ from models import (
 )
 
 logger = structlog.get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Video Duration Helper
+# ---------------------------------------------------------------------------
+
+def _get_clip_duration_ms(video_path: Path) -> int | None:
+    """
+    Returns the total video duration in milliseconds using ffprobe.
+    Falls back to None if ffprobe is not available or the probe fails —
+    the client will then fall back to max-fault-timestamp scaling.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "quiet",
+                "-print_format", "json",
+                "-show_format",
+                str(video_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        data = json.loads(result.stdout)
+        duration_s = float(data["format"]["duration"])
+        return int(duration_s * 1000)
+    except Exception as exc:
+        logger.warning("clip_duration_probe_failed", path=str(video_path), error=str(exc))
+        return None
+
 
 # ---------------------------------------------------------------------------
 # Settings
@@ -484,6 +517,7 @@ async def run_analysis_pipeline(
 
         # Stage 3: Write coaching report to Supabase
         report_id = str(uuid.uuid4())
+        clip_duration_ms = _get_clip_duration_ms(video_path)
 
         report_row = {
             "id": report_id,
@@ -495,6 +529,7 @@ async def run_analysis_pipeline(
             "analysis_confidence": analysis_data.get("analysis_confidence", AnalysisConfidence.MEDIUM.value),
             "prompt_version": analysis_data.get("prompt_version", "v1.0"),
             "global_cues": analysis_data.get("global_cues", []),
+            "clip_duration_ms": clip_duration_ms,
         }
 
         supabase.table("coaching_reports").insert(report_row).execute()
@@ -892,6 +927,7 @@ async def get_coaching_report(
         ),
         faults=faults,
         global_cues=report_data.get("global_cues", []),
+        clip_duration_ms=report_data.get("clip_duration_ms"),
         prompt_version=report_data.get("prompt_version", "v1.0"),
         disclaimer=AI_DISCLAIMER,
         created_at=datetime.fromisoformat(report_data["created_at"]),

@@ -148,6 +148,10 @@ class CoachingReportResponse(BaseModel):
     analysis_confidence: AnalysisConfidence = AnalysisConfidence.MEDIUM
     faults: list[MovementFaultResponse]
     global_cues: list[str]
+    clip_duration_ms: int | None = Field(
+        default=None,
+        description="Total clip duration in ms. Enables accurate FaultTimeline scaling on the client."
+    )
     prompt_version: str = "v1.0"
     disclaimer: str = AI_DISCLAIMER
     created_at: datetime

@@ -31,6 +31,19 @@ object NavRoutes {
     fun coachingReport(analysisId: String)                        = "coaching/report/$analysisId"
     fun coachingPlayback(videoId: String, startMs: Long = 0L)    = "coaching/playback/$videoId?timestamp=$startMs"
 
+    // Competition Hub
+    const val COMPETITION             = "competition"
+    fun competitionDetail(eventId: String) = "competition/$eventId"
+    fun competitionStandingEntry(eventId: String) = "competition/$eventId/entry"
+
+    // Nutrition
+    const val NUTRITION_SETUP = "nutrition/setup"
+    const val NUTRITION_LOG   = "nutrition/log"
+
+    // Coach
+    const val COACH_LINK      = "coach/link"
+    const val COACH_DASHBOARD = "coach/dashboard"
+
     // Deep link patterns for NavDeepLink
     const val DEEP_LINK_WOD_DETAIL     = "apexai://wod/{wodId}"
     const val DEEP_LINK_COACHING_REPORT = "apexai://coaching/report/{analysisId}"
@@ -43,6 +56,8 @@ object NavRoutes {
     const val VISION_REVIEW_PATTERN    = "vision/review/{videoUri}"
     const val COACHING_REPORT_PATTERN  = "coaching/report/{analysisId}"
     const val COACHING_PLAYBACK_PATTERN = "coaching/playback/{videoId}?timestamp={timestamp}"
+    const val COMPETITION_DETAIL_PATTERN       = "competition/{eventId}"
+    const val COMPETITION_STANDING_ENTRY_PATTERN = "competition/{eventId}/entry"
 
     private fun encode(value: String): String =
         java.net.URLEncoder.encode(value, "UTF-8")

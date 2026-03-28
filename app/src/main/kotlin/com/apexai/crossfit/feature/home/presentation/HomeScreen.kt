@@ -39,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.apexai.crossfit.R
+import com.apexai.crossfit.core.domain.model.DailyMacroSummary
+import com.apexai.crossfit.core.domain.model.MacroTargets
 import com.apexai.crossfit.core.domain.model.PersonalRecord
 import com.apexai.crossfit.core.domain.model.ReadinessScore
 import com.apexai.crossfit.core.domain.model.ReadinessZone
@@ -47,6 +49,7 @@ import com.apexai.crossfit.core.ui.components.ApexCard
 import com.apexai.crossfit.core.ui.components.ShimmerBox
 import com.apexai.crossfit.core.ui.theme.ApexTypography
 import com.apexai.crossfit.core.ui.theme.BackgroundDeepBlack
+import com.apexai.crossfit.core.ui.theme.BlazeOrange
 import com.apexai.crossfit.core.ui.theme.BorderSubtle
 import com.apexai.crossfit.core.ui.theme.CornerMedium
 import com.apexai.crossfit.core.ui.theme.CornerSmall
@@ -58,6 +61,7 @@ import com.apexai.crossfit.core.ui.theme.ReadinessRest
 import com.apexai.crossfit.core.ui.theme.SurfaceDark
 import com.apexai.crossfit.core.ui.theme.TextPrimary
 import com.apexai.crossfit.core.ui.theme.TextSecondary
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +70,7 @@ fun HomeScreen(
     onReadinessClick: () -> Unit,
     onPrClick: () -> Unit,
     onCameraClick: () -> Unit,
+    onNutritionClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -133,12 +138,90 @@ fun HomeScreen(
                     )
                 }
             }
+            // Nutrition summary card — only shown when there's data or targets set
+            if (uiState.macroSummary != null || uiState.macroTargets != null) {
+                item {
+                    NutritionSummaryCard(
+                        summary  = uiState.macroSummary,
+                        targets  = uiState.macroTargets,
+                        isLoading = uiState.isLoading,
+                        onClick  = onNutritionClick
+                    )
+                }
+            }
             item {
                 QuickActionsRow(
                     onCameraClick = onCameraClick,
                     onWodClick    = { onWodClick("") },
                     onPrClick     = onPrClick
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NutritionSummaryCard(
+    summary: DailyMacroSummary?,
+    targets: MacroTargets?,
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
+    if (isLoading) {
+        ShimmerBox(modifier = Modifier.fillMaxWidth().height(88.dp))
+        return
+    }
+    val calTarget = targets?.caloriesKcal ?: 2500
+    val calActual = summary?.totalCalories ?: 0
+    val proteinActual = summary?.totalProteinG?.roundToInt() ?: 0
+    val carbsActual   = summary?.totalCarbsG?.roundToInt() ?: 0
+    val fatActual     = summary?.totalFatG?.roundToInt() ?: 0
+    val calProgress   = (calActual.toFloat() / calTarget.toFloat()).coerceIn(0f, 1f)
+
+    ApexCard(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("TODAY'S NUTRITION", style = ApexTypography.labelSmall, color = TextSecondary)
+                Text("$calActual / $calTarget kcal", style = ApexTypography.bodySmall, color = BlazeOrange)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            // Calorie progress bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .background(SurfaceDark, CornerSmall)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(calProgress)
+                        .height(4.dp)
+                        .background(BlazeOrange, CornerSmall)
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${proteinActual}g", style = ApexTypography.titleMedium, color = ElectricBlue)
+                    Text("Protein", style = ApexTypography.labelSmall, color = TextSecondary)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${carbsActual}g", style = ApexTypography.titleMedium, color = NeonGreen)
+                    Text("Carbs", style = ApexTypography.labelSmall, color = TextSecondary)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${fatActual}g", style = ApexTypography.titleMedium, color = BlazeOrange)
+                    Text("Fat", style = ApexTypography.labelSmall, color = TextSecondary)
+                }
             }
         }
     }

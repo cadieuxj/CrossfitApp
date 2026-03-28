@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -169,6 +170,16 @@ fun WodLogScreen(
             }
 
             Spacer(Modifier.height(24.dp))
+
+            // Competition mode section — auto-appears when there's an active event
+            if (uiState.isActiveCompetitionEvent) {
+                CompetitionModeSection(
+                    eventName          = uiState.activeCompetitionName ?: "Active Competition",
+                    isOfficialSubmission = uiState.isOfficialSubmission,
+                    onToggle           = { viewModel.onEvent(WodLogEvent.OfficialSubmissionToggled(it)) }
+                )
+                Spacer(Modifier.height(24.dp))
+            }
 
             // RPE
             Text("EFFORT LEVEL (RPE)", style = ApexTypography.labelSmall, color = TextSecondary,
@@ -441,6 +452,73 @@ private fun DurationPickerSection(durationMinutes: Int?, onDurationChanged: (Int
         style = ApexTypography.bodySmall,
         color = TextSecondary
     )
+}
+
+@Composable
+private fun CompetitionModeSection(
+    eventName: String,
+    isOfficialSubmission: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    ApexCard(
+        borderColor = if (isOfficialSubmission) NeonGreen else BorderSubtle,
+        borderWidth = if (isOfficialSubmission) 2.dp else 1.dp
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Outlined.WorkspacePremium,
+                    contentDescription = null,
+                    tint = if (isOfficialSubmission) NeonGreen else TextSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    "COMPETITION MODE",
+                    style = ApexTypography.labelSmall,
+                    color = if (isOfficialSubmission) NeonGreen else TextSecondary
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Official Submission",
+                        style = ApexTypography.titleMedium,
+                        color = TextPrimary
+                    )
+                    Text(
+                        eventName,
+                        style = ApexTypography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+                Switch(
+                    checked = isOfficialSubmission,
+                    onCheckedChange = onToggle,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = BackgroundDeepBlack,
+                        checkedTrackColor = NeonGreen,
+                        uncheckedTrackColor = BorderSubtle
+                    )
+                )
+            }
+            if (isOfficialSubmission) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "This result will be flagged as your official competition score.",
+                    style = ApexTypography.bodySmall,
+                    color = NeonGreen
+                )
+            }
+        }
+    }
 }
 
 private fun rpeDescription(rpe: Int?): String = when (rpe) {

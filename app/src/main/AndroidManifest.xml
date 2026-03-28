@@ -23,6 +23,11 @@
     <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
 
     <!-- =====================================================================
+         Notifications (Android 13+)
+         ===================================================================== -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- =====================================================================
          Hardware features
          ===================================================================== -->
     <uses-feature
@@ -90,6 +95,20 @@
         <queries>
             <package android:name="com.google.android.apps.healthdata" />
         </queries>
+
+        <!-- =====================================================================
+             WorkManager — disable default initializer so Hilt can supply the factory
+             ===================================================================== -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
         <!-- =====================================================================
              FileProvider for sharing recorded videos

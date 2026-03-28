@@ -226,10 +226,10 @@ private fun MovementRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            "${wm.prescribedReps ?: "-"}×",
-            style = ApexTypography.headlineSmall,
+            wm.repScheme ?: "${wm.prescribedReps ?: "-"}×",
+            style = if (wm.repScheme != null) ApexTypography.labelLarge else ApexTypography.headlineSmall,
             color = ElectricBlue,
-            modifier = Modifier.width(48.dp),
+            modifier = Modifier.width(if (wm.repScheme != null) 72.dp else 48.dp),
             textAlign = TextAlign.End
         )
         Spacer(Modifier.width(12.dp))

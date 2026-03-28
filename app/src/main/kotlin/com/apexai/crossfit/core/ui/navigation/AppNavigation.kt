@@ -32,6 +32,22 @@ import com.apexai.crossfit.feature.pr.presentation.detail.PrDetailViewModel
 import com.apexai.crossfit.feature.readiness.presentation.ReadinessDashboardScreen
 import com.apexai.crossfit.feature.readiness.presentation.ReadinessViewModel
 import com.apexai.crossfit.feature.readiness.presentation.WellnessCheckInScreen
+import com.apexai.crossfit.feature.auth.presentation.splash.SplashScreen
+import com.apexai.crossfit.feature.auth.presentation.splash.SplashViewModel
+import com.apexai.crossfit.feature.coach.presentation.CoachDashboardScreen
+import com.apexai.crossfit.feature.coach.presentation.CoachDashboardViewModel
+import com.apexai.crossfit.feature.coach.presentation.CoachLinkScreen
+import com.apexai.crossfit.feature.coach.presentation.CoachLinkViewModel
+import com.apexai.crossfit.feature.competition.presentation.CompetitionDetailScreen
+import com.apexai.crossfit.feature.competition.presentation.CompetitionDetailViewModel
+import com.apexai.crossfit.feature.competition.presentation.CompetitionHubScreen
+import com.apexai.crossfit.feature.competition.presentation.CompetitionHubViewModel
+import com.apexai.crossfit.feature.home.presentation.HomeScreen
+import com.apexai.crossfit.feature.home.presentation.HomeViewModel
+import com.apexai.crossfit.feature.nutrition.presentation.MacroLogScreen
+import com.apexai.crossfit.feature.nutrition.presentation.MacroLogViewModel
+import com.apexai.crossfit.feature.profile.presentation.ProfileScreen
+import com.apexai.crossfit.feature.profile.presentation.ProfileViewModel
 import com.apexai.crossfit.feature.vision.presentation.camera.LiveCameraScreen
 import com.apexai.crossfit.feature.vision.presentation.camera.VisionViewModel
 import com.apexai.crossfit.feature.vision.presentation.review.RecordingReviewScreen
@@ -41,16 +57,27 @@ import com.apexai.crossfit.feature.wod.presentation.log.WodLogScreen
 import com.apexai.crossfit.feature.wod.presentation.log.WodLogViewModel
 import com.apexai.crossfit.feature.wod.presentation.timer.WodTimerScreen
 import com.apexai.crossfit.feature.wod.presentation.timer.WodTimerViewModel
-import com.apexai.crossfit.ui.home.HomeScreen
-import com.apexai.crossfit.ui.home.HomeViewModel
-import com.apexai.crossfit.ui.splash.SplashScreen
-import com.apexai.crossfit.ui.splash.SplashViewModel
 
 private val SLIDE_DURATION = 300
 
 @Composable
-fun AppNavigation(modifier: Modifier = Modifier) {
+fun AppNavigation(
+    modifier: Modifier = Modifier,
+    pendingRoute: String? = null,
+    onPendingRouteConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
+
+    // Navigate to a route delivered from a notification tap or external intent.
+    // Fires once per non-null pendingRoute, then clears it to prevent re-navigation.
+    LaunchedEffect(pendingRoute) {
+        if (pendingRoute != null) {
+            navController.navigate(pendingRoute) {
+                launchSingleTop = true
+            }
+            onPendingRouteConsumed()
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -138,22 +165,16 @@ fun AppNavigation(modifier: Modifier = Modifier) {
         // ---------------------------------------------------------------
         composable(NavRoutes.HOME) {
             val vm: HomeViewModel = hiltViewModel()
-            val currentRoute by navController.currentBackStackEntryAsState()
             HomeScreen(
-                viewModel          = vm,
-                currentNavRoute    = currentRoute?.destination?.route ?: NavRoutes.HOME,
-                onNavigateToWod    = { navController.navigate(NavRoutes.WOD_BROWSE) },
-                onNavigateToWodDetail = { wodId -> navController.navigate(NavRoutes.wodDetail(wodId)) },
-                onNavigateToPr     = { navController.navigate(NavRoutes.PR_DASHBOARD) },
-                onNavigateToReadiness = { navController.navigate(NavRoutes.READINESS) },
-                onNavigateToProfile   = { navController.navigate(NavRoutes.PROFILE) },
-                onNavigateToCamera    = { navController.navigate(NavRoutes.VISION_LIVE) },
-                onNavigateToPrDetail  = { movementId -> navController.navigate(NavRoutes.prDetail(movementId)) },
-                onBottomNavNavigate   = { route -> navController.navigate(route) {
-                    popUpTo(NavRoutes.HOME) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }}
+                viewModel        = vm,
+                onWodClick       = { wodId ->
+                    if (wodId.isNotBlank()) navController.navigate(NavRoutes.wodDetail(wodId))
+                    else navController.navigate(NavRoutes.WOD_BROWSE)
+                },
+                onReadinessClick = { navController.navigate(NavRoutes.READINESS) },
+                onPrClick        = { navController.navigate(NavRoutes.PR_DASHBOARD) },
+                onCameraClick    = { navController.navigate(NavRoutes.VISION_LIVE) },
+                onNutritionClick = { navController.navigate(NavRoutes.NUTRITION_LOG) }
             )
         }
 
@@ -375,20 +396,76 @@ fun AppNavigation(modifier: Modifier = Modifier) {
         // Profile
         // ---------------------------------------------------------------
         composable(NavRoutes.PROFILE) {
-            val vm: com.apexai.crossfit.feature.auth.presentation.profile.ProfileViewModel = hiltViewModel()
-            com.apexai.crossfit.feature.auth.presentation.profile.ProfileScreen(
+            val vm: ProfileViewModel = hiltViewModel()
+            ProfileScreen(
                 viewModel = vm,
-                currentNavRoute = NavRoutes.PROFILE,
-                onNavigateToLogin = {
+                onLoggedOut = {
                     navController.navigate(NavRoutes.AUTH_LOGIN) {
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                onNavigateToCoachLink      = { navController.navigate(NavRoutes.COACH_LINK) },
+                onNavigateToCoachDashboard = { navController.navigate(NavRoutes.COACH_DASHBOARD) },
+                onNavigateToNutrition      = { navController.navigate(NavRoutes.NUTRITION_LOG) }
+            )
+        }
+
+        // ---------------------------------------------------------------
+        // Competition Hub
+        // ---------------------------------------------------------------
+        composable(NavRoutes.COMPETITION) {
+            val vm: CompetitionHubViewModel = hiltViewModel()
+            CompetitionHubScreen(
+                viewModel = vm,
+                currentNavRoute = NavRoutes.COMPETITION,
+                onNavigateToDetail = { eventId -> navController.navigate(NavRoutes.competitionDetail(eventId)) },
                 onBottomNavNavigate = { route -> navController.navigate(route) {
                     popUpTo(NavRoutes.HOME) { saveState = true }
                     launchSingleTop = true
                     restoreState = true
-                }}
+                }},
+                onCameraFabClick = { navController.navigate(NavRoutes.VISION_LIVE) }
+            )
+        }
+
+        composable(
+            route = NavRoutes.COMPETITION_DETAIL_PATTERN,
+            arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+        ) {
+            val vm: CompetitionDetailViewModel = hiltViewModel()
+            CompetitionDetailScreen(
+                viewModel = vm,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // ---------------------------------------------------------------
+        // Nutrition
+        // ---------------------------------------------------------------
+        composable(NavRoutes.NUTRITION_LOG) {
+            val vm: MacroLogViewModel = hiltViewModel()
+            MacroLogScreen(
+                viewModel = vm,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // ---------------------------------------------------------------
+        // Coach
+        // ---------------------------------------------------------------
+        composable(NavRoutes.COACH_LINK) {
+            val vm: CoachLinkViewModel = hiltViewModel()
+            CoachLinkScreen(
+                viewModel = vm,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(NavRoutes.COACH_DASHBOARD) {
+            val vm: CoachDashboardViewModel = hiltViewModel()
+            CoachDashboardScreen(
+                viewModel = vm,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }
